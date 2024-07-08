@@ -1,0 +1,75 @@
+import numpy as np
+import random
+import matplotlib.pyplot as plt
+
+class Neuron:
+    def __init__(self, a, b, c, d, initial_v=0):
+        self.a = a #Timestep of activation of K+ channel and innactivation of Na+ ions. Smaller value means recovery will be slower
+        self.b = b #
+        self.c = c
+        self.d = d
+        self.v = initial_v
+        self.u = self.b * self.v
+
+    def update(self, I):
+        dv = 0.04*self.v**2 + 5*self.v + 140 - self.u + I
+        du = self.a * (self.b * self.v - self.u)
+        self.v += dv
+        self.u += du
+        if self.v > 30:  # Spike condition
+            self.v = self.c
+            self.u += self.d
+        return self.v
+
+class ExcitatoryNeuron(Neuron):
+    def __init__(self, initial_v=0):
+        c_value = random.uniform(-70,-60)
+        super().__init__(0.02, 0.2, c_value, 8, initial_v)
+
+class InhibitoryNeuron(Neuron):
+    def __init__(self, initial_v=0):
+        c_value = random.uniform(-70,-60)
+        super().__init__(0.1, 0.2, c_value, 2, initial_v) #fires 5 times as much as exc neuron as a value is 5 times as more
+
+# Parameters
+dt = 1
+T = 1000
+timesteps = int(T / dt)
+
+exc_neuron = ExcitatoryNeuron(initial_v=-65)  # Set initial membrane potential
+inh_neuron = InhibitoryNeuron(initial_v=-65)  # Set initial membrane potential
+
+exc_values = np.zeros(timesteps)
+inh_values = np.zeros(timesteps)
+resultant_wave = np.zeros(timesteps)
+
+for t in range(timesteps):
+    exc_effect = exc_neuron.update(5)  # External current to control frequency; by adding more mV to the system; making it more prone to spike
+    inh_effect = inh_neuron.update(5)  
+    
+    # Use this for phase difference. 
+    # If you want, for instance, the inhibitory neuron to start firing with a delay.
+    if t < 250: 
+        inh_effect = 0
+
+    exc_values[t] = exc_effect
+    inh_values[t] = inh_effect
+    resultant_wave[t] = exc_effect - 0.2 * inh_effect  # Interaction effect (8 to 2 population ratio is shown)
+
+# Plotting
+times = np.arange(0, T, dt)
+plt.figure(figsize=(12, 8))
+plt.subplot(3, 1, 1)
+plt.plot(times, exc_values, label='Excitatory Neuron')
+plt.legend()
+plt.subplot(3, 1, 2)
+plt.plot(times, inh_values, label='Inhibitory Neuron', color='red')
+plt.legend()
+plt.subplot(3, 1, 3)
+plt.plot(times, resultant_wave, label='Interaction Effect', color='green')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+
